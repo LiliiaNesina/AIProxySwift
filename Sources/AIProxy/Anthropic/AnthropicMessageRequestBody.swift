@@ -130,6 +130,9 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
     /// `max_tokens` limit.
     public let thinking: AnthropicThinkingConfigParam?
 
+    /// Effort Claude 4.5+ spends on the response (`output_config`).
+    public let outputConfig: AnthropicOutputConfig?
+
     /// How the model should use the provided tools.
     ///
     /// The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
@@ -225,6 +228,7 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
 
         // Optional
         case metadata
+        case outputConfig = "output_config"
         case serviceTier = "service_tier"
         case stopSequences = "stop_sequences"
         case stream
@@ -254,8 +258,10 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
         toolChoice: AnthropicToolChoice? = nil,
         tools: [AnthropicToolUnion]? = nil,
         topK: Int? = nil,
-        topP: Double? = nil
+        topP: Double? = nil,
+        outputConfig: AnthropicOutputConfig? = nil
     ) {
+        self.outputConfig = outputConfig
         self.maxTokens = maxTokens
         self.messages = messages
         self.model = model
