@@ -82,11 +82,16 @@ extension GeminiGenerateContentResponseBody.Candidate.Content {
     /// See: https://ai.google.dev/api/caching#Part
     nonisolated public enum Part: Decodable, Sendable {
         case text(String, thoughtSignature: String? = nil)
+        /// A thought summary (`"thought": true`), returned while the model
+        /// reasons when the request sets `thinkingConfig.includeThoughts`.
+        /// It is not part of the answer.
+        case thought(String, thoughtSignature: String? = nil)
         case functionCall(name: String, args: [String: any Sendable]?, thoughtSignature: String? = nil)
         case inlineData(mimeType: String, base64Data: String, thoughtSignature: String? = nil)
 
         private enum CodingKeys: String, CodingKey {
             case text
+            case thought
             case functionCall
             case inlineData
             case thoughtSignature
@@ -119,6 +124,8 @@ extension GeminiGenerateContentResponseBody.Candidate.Content {
                 self = .functionCall(name: functionCall.name, args: functionCall.args?.untypedDictionary, thoughtSignature: thoughtSignature)
             } else if let inlineData = try container.decodeIfPresent(_InlineData.self, forKey: .inlineData) {
                 self = .inlineData(mimeType: inlineData.mimeType, base64Data: inlineData.data, thoughtSignature: thoughtSignature)
+            } else if try container.decodeIfPresent(Bool.self, forKey: .thought) == true {
+                self = .thought(try container.decode(String.self, forKey: .text), thoughtSignature: thoughtSignature)
             } else {
                 self = .text(try container.decode(String.self, forKey: .text), thoughtSignature: thoughtSignature)
             }

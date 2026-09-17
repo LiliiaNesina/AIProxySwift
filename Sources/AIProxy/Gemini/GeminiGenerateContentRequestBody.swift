@@ -494,6 +494,14 @@ extension GeminiGenerateContentRequestBody.GenerationConfig {
             self.includeThoughts = includeThoughts
         }
 
+        /// Ask for thought summaries only, leaving the thinking level or
+        /// budget to the provider's (or a proxy's) default.
+        public init(includeThoughts: Bool) {
+            self.thinkingBudget = nil
+            self.thinkingLevel = nil
+            self.includeThoughts = includeThoughts
+        }
+
         nonisolated public enum ThinkingLevel: String, Encodable, Sendable {
             case minimal = "MINIMAL"
             case low = "LOW"
