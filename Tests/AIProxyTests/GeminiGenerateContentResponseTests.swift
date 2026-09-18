@@ -300,4 +300,40 @@ final class GeminiGenerateContentResponseBodyTests: XCTestCase {
         XCTAssertEqual(7, candidate.groundingMetadata?.groundingSupports?.count)
         XCTAssertEqual([0.63744724], candidate.groundingMetadata?.groundingSupports?.first?.confidenceScores)
     }
+
+    /// Parts without text must not fail the response: a thought or a signature alone decode,
+    /// unmodelled kinds (executableCode, …) are skipped, the rest of the content survives.
+    func testPartsWithoutTextAndUnmodelledKindsDecode() throws {
+        let json = #"""
+        {"candidates":[{"content":{"role":"model","parts":[
+            {"thoughtSignature":"c2ln"},
+            {"thought":true,"thoughtSignature":"dGhv"},
+            {"executableCode":{"language":"PYTHON","code":"print(1)"}},
+            {"codeExecutionResult":{"outcome":"OUTCOME_OK","output":"1"}},
+            {"text":"answer"}
+        ]},"finishReason":"STOP"}]}
+        """#
+        let body = try GeminiGenerateContentResponseBody.deserialize(from: json)
+        let parts = try XCTUnwrap(body.candidates?.first?.content?.parts)
+        XCTAssertEqual(3, parts.count)
+        guard case .text("", let signature) = parts[0] else { return XCTFail() }
+        XCTAssertEqual("c2ln", signature)
+        guard case .thought("", let thoughtSignature) = parts[1] else { return XCTFail() }
+        XCTAssertEqual("dGhv", thoughtSignature)
+        guard case .text("answer", nil) = parts[2] else { return XCTFail() }
+    }
+
+    /// Gemini 3 image models stream interim images while reasoning; they are not the result.
+    func testThoughtImageIsNotTheResultImage() throws {
+        let json = #"""
+        {"candidates":[{"content":{"role":"model","parts":[
+            {"inlineData":{"mimeType":"image/png","data":"AAAA"},"thought":true},
+            {"inlineData":{"mimeType":"image/png","data":"BBBB"},"thoughtSignature":"c2ln"}
+        ]},"finishReason":"STOP"}]}
+        """#
+        let body = try GeminiGenerateContentResponseBody.deserialize(from: json)
+        let parts = try XCTUnwrap(body.candidates?.first?.content?.parts)
+        guard case .thoughtImage(mimeType: "image/png", base64Data: "AAAA", thoughtSignature: nil) = parts[0] else { return XCTFail() }
+        guard case .inlineData(mimeType: "image/png", base64Data: "BBBB", thoughtSignature: "c2ln") = parts[1] else { return XCTFail() }
+    }
 }

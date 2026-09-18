@@ -63,6 +63,7 @@ extension GeminiGenerateContentResponseBody.Candidate {
     /// field containing multi-part data that contains the content of the message turn.
     nonisolated public struct Content: Decodable, Sendable {
         /// Ordered Parts that constitute a single message. Parts may have different MIME types.
+        /// Part kinds this SDK does not model are left out (see `init(from:)`).
         public let parts: [Part]?
 
         /// The producer of the content. Either 'user' or 'model'.
@@ -71,6 +72,31 @@ extension GeminiGenerateContentResponseBody.Candidate {
         public init(parts: [Part]?, role: String?) {
             self.parts = parts
             self.role = role
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case parts
+            case role
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.role = try container.decodeIfPresent(String.self, forKey: .role)
+            // `Part` is an open union: executableCode, codeExecutionResult, functionResponse,
+            // fileData, videoMetadata and future kinds have no case here. Skip such a part
+            // instead of failing the whole response — a streaming caller that treats an
+            // undecodable chunk as fatal would otherwise lose the entire answer.
+            self.parts = try container
+                .decodeIfPresent([LossyPart].self, forKey: .parts)?
+                .compactMap(\.part)
+        }
+
+        private struct LossyPart: Decodable {
+            let part: Part?
+
+            init(from decoder: any Decoder) throws {
+                self.part = try? Part(from: decoder)
+            }
         }
     }
 }
@@ -88,6 +114,9 @@ extension GeminiGenerateContentResponseBody.Candidate.Content {
         case thought(String, thoughtSignature: String? = nil)
         case functionCall(name: String, args: [String: any Sendable]?, thoughtSignature: String? = nil)
         case inlineData(mimeType: String, base64Data: String, thoughtSignature: String? = nil)
+        /// An interim image the model drew while reasoning (`"thought": true` on an inline-data
+        /// part, returned by Gemini 3 image models). It is not the result.
+        case thoughtImage(mimeType: String, base64Data: String, thoughtSignature: String? = nil)
 
         private enum CodingKeys: String, CodingKey {
             case text
@@ -120,14 +149,26 @@ extension GeminiGenerateContentResponseBody.Candidate.Content {
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let thoughtSignature = try container.decodeIfPresent(String.self, forKey: .thoughtSignature)
+            let isThought = try container.decodeIfPresent(Bool.self, forKey: .thought) == true
             if let functionCall = try container.decodeIfPresent(_FunctionCall.self, forKey: .functionCall) {
                 self = .functionCall(name: functionCall.name, args: functionCall.args?.untypedDictionary, thoughtSignature: thoughtSignature)
             } else if let inlineData = try container.decodeIfPresent(_InlineData.self, forKey: .inlineData) {
-                self = .inlineData(mimeType: inlineData.mimeType, base64Data: inlineData.data, thoughtSignature: thoughtSignature)
-            } else if try container.decodeIfPresent(Bool.self, forKey: .thought) == true {
-                self = .thought(try container.decode(String.self, forKey: .text), thoughtSignature: thoughtSignature)
+                self = isThought
+                    ? .thoughtImage(mimeType: inlineData.mimeType, base64Data: inlineData.data, thoughtSignature: thoughtSignature)
+                    : .inlineData(mimeType: inlineData.mimeType, base64Data: inlineData.data, thoughtSignature: thoughtSignature)
+            } else if isThought {
+                // A thought may carry only its signature.
+                self = .thought(try container.decodeIfPresent(String.self, forKey: .text) ?? "", thoughtSignature: thoughtSignature)
+            } else if let text = try container.decodeIfPresent(String.self, forKey: .text) {
+                self = .text(text, thoughtSignature: thoughtSignature)
+            } else if let thoughtSignature {
+                // A signature-only part: keep the signature, it may have to go back.
+                self = .text("", thoughtSignature: thoughtSignature)
             } else {
-                self = .text(try container.decode(String.self, forKey: .text), thoughtSignature: thoughtSignature)
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unsupported Gemini part kind"
+                ))
             }
         }
 
