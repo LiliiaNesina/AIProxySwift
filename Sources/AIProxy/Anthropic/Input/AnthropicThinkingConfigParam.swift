@@ -7,13 +7,18 @@
 
 import Foundation
 
-/// Configuration for enabling Claude's extended thinking.
+/// Configuration for Claude's thinking.
 ///
-/// When enabled, responses include `thinking` content blocks showing Claude's thinking process
-/// before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your
-/// `max_tokens` limit.
+/// When thinking is on, responses include `thinking` content blocks before the final answer, and
+/// the thinking tokens count towards your `max_tokens` limit.
 ///
-/// See [extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for details.
+/// - `adaptive`: Claude decides per request whether and how deeply to think; steer the depth with
+///   `output_config.effort`. The only on-mode for Claude 5 models (`budget_tokens` is rejected there).
+/// - `enabled(budgetTokens:)`: the manual budget used by models before adaptive thinking, e.g.
+///   Claude Haiku 4.5. Requires at least 1,024 tokens and less than `max_tokens`.
+///
+/// See [adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking) and
+/// [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking).
 nonisolated public enum AnthropicThinkingConfigParam: Encodable, Sendable {
     /// Enable extended thinking with a token budget.
     ///
@@ -22,7 +27,10 @@ nonisolated public enum AnthropicThinkingConfigParam: Encodable, Sendable {
     ///   improving response quality. Must be ≥1024 and less than `max_tokens`.
     case enabled(budgetTokens: Int)
 
-    /// Disable extended thinking.
+    /// Let Claude decide whether and how much to think (Claude 5 models).
+    case adaptive
+
+    /// Disable thinking.
     case disabled
 
     private enum CodingKeys: String, CodingKey {
@@ -36,6 +44,8 @@ nonisolated public enum AnthropicThinkingConfigParam: Encodable, Sendable {
         case .enabled(let budgetTokens):
             try container.encode("enabled", forKey: .type)
             try container.encode(budgetTokens, forKey: .budgetTokens)
+        case .adaptive:
+            try container.encode("adaptive", forKey: .type)
         case .disabled:
             try container.encode("disabled", forKey: .type)
         }
