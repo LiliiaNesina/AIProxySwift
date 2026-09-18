@@ -133,6 +133,13 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
     /// Effort Claude 4.5+ spends on the response (`output_config`).
     public let outputConfig: AnthropicOutputConfig?
 
+    /// Automatic prompt caching (`cache_control` on the request itself).
+    ///
+    /// The API places the breakpoint on the last cacheable block and moves it forward as the
+    /// conversation grows, so each turn reads the prefix the previous turn wrote.
+    /// See https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+    public let cacheControl: AnthropicCacheControlEphemeral?
+
     /// How the model should use the provided tools.
     ///
     /// The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
@@ -227,6 +234,7 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
         case model
 
         // Optional
+        case cacheControl = "cache_control"
         case metadata
         case outputConfig = "output_config"
         case serviceTier = "service_tier"
@@ -259,9 +267,11 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
         tools: [AnthropicToolUnion]? = nil,
         topK: Int? = nil,
         topP: Double? = nil,
-        outputConfig: AnthropicOutputConfig? = nil
+        outputConfig: AnthropicOutputConfig? = nil,
+        cacheControl: AnthropicCacheControlEphemeral? = nil
     ) {
         self.outputConfig = outputConfig
+        self.cacheControl = cacheControl
         self.maxTokens = maxTokens
         self.messages = messages
         self.model = model

@@ -29,6 +29,22 @@ final class AnthropicMessageRequestTests: XCTestCase {
         )
     }
 
+    func testRequestLevelCacheControlIsEncodable() throws {
+        let request = AnthropicMessageRequestBody(
+            maxTokens: 1024,
+            messages: [
+                AnthropicMessageParam(content: [.textBlock(AnthropicTextBlockParam(text: "hello world"))], role: .user)
+            ],
+            model: "claude-sonnet-5",
+            cacheControl: AnthropicCacheControlEphemeral(ttl: .fiveMinutes)
+        )
+        XCTAssertEqual(
+            #"{"cache_control":{"ttl":"5m","type":"ephemeral"},"max_tokens":1024,"messages":[{"content":[{"text":"hello world","type":"text"}],"role":"user"}],"model":"claude-sonnet-5"}"#
+            ,
+            try request.serialize()
+        )
+    }
+
     func testRequestWithToolUseIsEncodable() throws {
         let request = AnthropicMessageRequestBody(
             maxTokens: 1024,
