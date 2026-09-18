@@ -123,11 +123,9 @@ nonisolated public struct AnthropicMessageRequestBody: Encodable, Sendable {
     /// Note that even with `temperature` of `0.0`, the results will not be fully deterministic.
     public let temperature: Double?
 
-    /// Configuration for enabling Claude's extended thinking.
-    ///
-    /// When enabled, responses include `thinking` content blocks showing Claude's thinking process
-    /// before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your
-    /// `max_tokens` limit.
+    /// Configuration for Claude's thinking: `adaptive` on Claude 5 models, a token budget
+    /// (`enabled`) on earlier ones, or `disabled`. Thinking tokens count towards `max_tokens`.
+    /// See `AnthropicThinkingConfigParam`.
     public let thinking: AnthropicThinkingConfigParam?
 
     /// Effort Claude 4.5+ spends on the response (`output_config`).

@@ -9,7 +9,7 @@
 /// `MessageDeltaUsage` schema marks all but `output_tokens` as nullable, and the event often
 /// carries `output_tokens` alone, e.g. `"usage": {"output_tokens": 15}`.
 /// https://platform.claude.com/docs/en/build-with-claude/streaming
-public struct AnthropicMessageDeltaUsage: Decodable, Sendable {
+nonisolated public struct AnthropicMessageDeltaUsage: Decodable, Sendable {
     /// The cumulative number of input tokens, when reported.
     public let inputTokens: Int?
 
@@ -31,5 +31,16 @@ public struct AnthropicMessageDeltaUsage: Decodable, Sendable {
         case cacheCreationInputTokens = "cache_creation_input_tokens"
         case cacheReadInputTokens = "cache_read_input_tokens"
         case serverToolUse = "server_tool_use"
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.inputTokens = try container.decodeIfPresent(Int.self, forKey: .inputTokens)
+        self.outputTokens = try container.decodeIfPresent(Int.self, forKey: .outputTokens)
+        self.cacheCreationInputTokens = try container.decodeIfPresent(Int.self, forKey: .cacheCreationInputTokens)
+        self.cacheReadInputTokens = try container.decodeIfPresent(Int.self, forKey: .cacheReadInputTokens)
+        // A server tool this SDK does not count yet (web fetch alone, say) must not cost the
+        // token counts above.
+        self.serverToolUse = try? container.decodeIfPresent(AnthropicServerToolUsage.self, forKey: .serverToolUse)
     }
 }

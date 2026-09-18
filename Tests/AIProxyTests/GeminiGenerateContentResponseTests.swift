@@ -323,6 +323,45 @@ final class GeminiGenerateContentResponseBodyTests: XCTestCase {
         guard case .text("answer", nil) = parts[2] else { return XCTFail() }
     }
 
+    /// A function call keeps its signature: Gemini 3 validates it when the result goes back.
+    func testFunctionCallKeepsItsThoughtSignature() throws {
+        let json = #"""
+        {"candidates":[{"content":{"role":"model","parts":[
+            {"functionCall":{"name":"web_search","args":{"q":"x"}},"thoughtSignature":"c2ln"}
+        ]},"finishReason":"STOP"}]}
+        """#
+        let body = try GeminiGenerateContentResponseBody.deserialize(from: json)
+        let parts = try XCTUnwrap(body.candidates?.first?.content?.parts)
+        guard case .functionCall(name: "web_search", args: _, thoughtSignature: "c2ln") = parts[0] else { return XCTFail() }
+    }
+
+    /// Only unmodelled kinds are skipped. A broken part of a modelled kind (a function call
+    /// without a name) still fails the decode rather than silently emptying the turn.
+    func testBrokenPartOfAModelledKindStillFailsTheDecode() {
+        let json = #"""
+        {"candidates":[{"content":{"role":"model","parts":[
+            {"functionCall":{"args":{"q":"x"}}}
+        ]},"finishReason":"STOP"}]}
+        """#
+        XCTAssertThrowsError(try GeminiGenerateContentResponseBody.deserialize(from: json))
+    }
+
+    /// An unmodelled part keeps only its signature (as empty text); junk entries are skipped.
+    func testUnmodelledPartKeepsOnlyItsSignatureAndJunkIsSkipped() throws {
+        let json = #"""
+        {"candidates":[{"content":{"role":"model","parts":[
+            {"executableCode":{"language":"PYTHON","code":"print(1)"},"thoughtSignature":"c2ln"},
+            null,
+            {"text":"answer"}
+        ]},"finishReason":"STOP"}]}
+        """#
+        let body = try GeminiGenerateContentResponseBody.deserialize(from: json)
+        let parts = try XCTUnwrap(body.candidates?.first?.content?.parts)
+        XCTAssertEqual(2, parts.count)
+        guard case .text("", "c2ln") = parts[0] else { return XCTFail() }
+        guard case .text("answer", nil) = parts[1] else { return XCTFail() }
+    }
+
     /// Gemini 3 image models stream interim images while reasoning; they are not the result.
     func testThoughtImageIsNotTheResultImage() throws {
         let json = #"""

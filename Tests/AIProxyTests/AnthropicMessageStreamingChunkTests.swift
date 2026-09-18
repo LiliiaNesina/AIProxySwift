@@ -54,6 +54,15 @@ final class AnthropicMessageStreamingChunkTests: XCTestCase {
         XCTAssertEqual(510, messageDelta.usage?.outputTokens)
     }
 
+    /// A server tool this SDK does not count yet must not cost the token counts.
+    func testMessageDeltaKeepsTokenCountsWithUnfamiliarServerToolUsage() throws {
+        let json = #"{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":15,"server_tool_use":{"web_fetch_requests":1}}}"#
+        let event = try JSONDecoder().decode(AnthropicStreamingEvent.self, from: Data(json.utf8))
+        guard case .messageDelta(let messageDelta) = event else { return XCTFail() }
+        XCTAssertEqual(15, messageDelta.usage?.outputTokens)
+        XCTAssertNil(messageDelta.usage?.serverToolUse)
+    }
+
     /// Null counts, a missing usage object and an unexpected usage shape all keep the stop reason.
     func testMessageDeltaSurvivesMissingOrUnexpectedUsage() throws {
         let lines = [

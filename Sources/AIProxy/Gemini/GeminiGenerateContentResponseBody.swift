@@ -63,7 +63,8 @@ extension GeminiGenerateContentResponseBody.Candidate {
     /// field containing multi-part data that contains the content of the message turn.
     nonisolated public struct Content: Decodable, Sendable {
         /// Ordered Parts that constitute a single message. Parts may have different MIME types.
-        /// Part kinds this SDK does not model are left out (see `init(from:)`).
+        /// Part kinds this SDK does not model are left out (see `init(from:)`); a thought
+        /// signature one carries survives as an empty `.text` part, since it may have to go back.
         public let parts: [Part]?
 
         /// The producer of the content. Either 'user' or 'model'.
@@ -95,7 +96,15 @@ extension GeminiGenerateContentResponseBody.Candidate {
             let part: Part?
 
             init(from decoder: any Decoder) throws {
-                self.part = try? Part(from: decoder)
+                do {
+                    self.part = try Part(from: decoder)
+                } catch {
+                    // Skip only a kind `Part` has no case for. A broken part of a kind it does
+                    // model (a function call without a name) still fails the decode: dropping it
+                    // would turn a failed tool call into a silent, empty turn.
+                    guard !Part.carriesModeledPayload(decoder) else { throw error }
+                    self.part = nil
+                }
             }
         }
     }
@@ -124,6 +133,13 @@ extension GeminiGenerateContentResponseBody.Candidate.Content {
             case functionCall
             case inlineData
             case thoughtSignature
+        }
+
+        /// Whether the part holds a payload this enum models — text, a function call or inline
+        /// data. `thought` / `thoughtSignature` are metadata and do not count.
+        fileprivate static func carriesModeledPayload(_ decoder: any Decoder) -> Bool {
+            guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return false }
+            return container.contains(.text) || container.contains(.functionCall) || container.contains(.inlineData)
         }
 
         private struct _FunctionCall: Decodable, Sendable {

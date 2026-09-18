@@ -29,6 +29,23 @@ final class AnthropicMessageRequestTests: XCTestCase {
         )
     }
 
+    func testAdaptiveThinkingIsEncodable() throws {
+        let request = AnthropicMessageRequestBody(
+            maxTokens: 16384,
+            messages: [
+                AnthropicMessageParam(content: [.textBlock(AnthropicTextBlockParam(text: "hello world"))], role: .user)
+            ],
+            model: "claude-sonnet-5",
+            thinking: .adaptive,
+            outputConfig: AnthropicOutputConfig(effort: "medium")
+        )
+        XCTAssertEqual(
+            #"{"max_tokens":16384,"messages":[{"content":[{"text":"hello world","type":"text"}],"role":"user"}],"model":"claude-sonnet-5","output_config":{"effort":"medium"},"thinking":{"type":"adaptive"}}"#
+            ,
+            try request.serialize()
+        )
+    }
+
     func testRequestLevelCacheControlIsEncodable() throws {
         let request = AnthropicMessageRequestBody(
             maxTokens: 1024,
