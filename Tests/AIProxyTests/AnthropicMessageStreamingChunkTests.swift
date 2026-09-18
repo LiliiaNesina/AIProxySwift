@@ -34,4 +34,37 @@ final class AnthropicMessageStreamingChunkTests: XCTestCase {
             XCTFail()
         }
     }
+
+    /// The event may carry `output_tokens` alone. It must still decode, stop reason included.
+    func testMessageDeltaWithOutputTokensOnlyIsDecodable() throws {
+        let json = #"{"type": "message_delta", "delta": {"stop_reason": "max_tokens", "stop_sequence":null}, "usage": {"output_tokens": 15}}"#
+        let event = try JSONDecoder().decode(AnthropicStreamingEvent.self, from: Data(json.utf8))
+        guard case .messageDelta(let messageDelta) = event else { return XCTFail() }
+        XCTAssertEqual(.maxTokens, messageDelta.delta.stopReason)
+        XCTAssertEqual(15, messageDelta.usage?.outputTokens)
+        XCTAssertNil(messageDelta.usage?.inputTokens)
+    }
+
+    func testMessageDeltaWithFullUsageIsDecodable() throws {
+        let json = #"{"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"input_tokens":10682,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":510,"server_tool_use":{"web_search_requests":1}}}"#
+        let event = try JSONDecoder().decode(AnthropicStreamingEvent.self, from: Data(json.utf8))
+        guard case .messageDelta(let messageDelta) = event else { return XCTFail() }
+        XCTAssertEqual(.endTurn, messageDelta.delta.stopReason)
+        XCTAssertEqual(10682, messageDelta.usage?.inputTokens)
+        XCTAssertEqual(510, messageDelta.usage?.outputTokens)
+    }
+
+    /// Null counts, a missing usage object and an unexpected usage shape all keep the stop reason.
+    func testMessageDeltaSurvivesMissingOrUnexpectedUsage() throws {
+        let lines = [
+            #"{"type":"message_delta","delta":{"stop_reason":"refusal","stop_sequence":null},"usage":{"input_tokens":null,"output_tokens":510}}"#,
+            #"{"type": "message_delta", "delta": {"stop_reason": "refusal", "stop_sequence": null}}"#,
+            #"{"type":"message_delta","delta":{"stop_reason":"refusal"},"usage":"unexpected"}"#,
+        ]
+        for json in lines {
+            let event = try JSONDecoder().decode(AnthropicStreamingEvent.self, from: Data(json.utf8))
+            guard case .messageDelta(let messageDelta) = event else { return XCTFail(json) }
+            XCTAssertEqual(.refusal, messageDelta.delta.stopReason, json)
+        }
+    }
 }
