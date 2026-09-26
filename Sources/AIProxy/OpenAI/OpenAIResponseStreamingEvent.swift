@@ -921,7 +921,7 @@ extension OpenAIResponseStreamingEvent {
 // MARK: - Error Events
 extension OpenAIResponseStreamingEvent {
     nonisolated public struct ErrorEvent: Decodable, Sendable {
-        public let sequenceNumber: Int
+        public let sequenceNumber: Int?
         public let code: String
         public let message: String
         public let param: String?

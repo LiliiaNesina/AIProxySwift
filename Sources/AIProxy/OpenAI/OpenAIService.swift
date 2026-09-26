@@ -463,7 +463,7 @@ import Foundation
             secondsToWait: secondsToWait,
             additionalHeaders: additionalHeaders
         )
-        return try await self.serviceNetworker.makeRequestAndDeserializeStreamingChunks(request)
+        return try await self.serviceNetworker.makeRequestAndDeserializeOpenAIResponseEvents(request)
     }
 
     @available(*, deprecated, message: "This has been renamed to createStreamingResponse")

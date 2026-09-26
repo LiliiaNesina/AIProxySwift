@@ -223,15 +223,15 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
 extension OpenAIResponse {
     nonisolated public struct IncompleteDetails: Decodable, Sendable {
         /// The reason why the response is incomplete.
-        let reason: String
+        public let reason: String
     }
 
     nonisolated public struct ResponseError: Decodable, Sendable {
         /// The error code for the response.
-        let code: String
+        public let code: String
 
         /// A human-readable description of the error.
-        let message: String
+        public let message: String
     }
 
     nonisolated public struct Reasoning: Decodable, Sendable {

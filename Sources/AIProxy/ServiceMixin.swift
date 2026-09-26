@@ -75,6 +75,75 @@ extension ServiceMixin {
         }
     }
 
+    /// Responses streams must not silently drop a malformed event or treat a
+    /// severed connection as a successful answer. The generic SSE decoder is
+    /// intentionally tolerant for other providers, so Responses uses this
+    /// stricter typed path.
+    @AIProxyActor func makeRequestAndDeserializeOpenAIResponseEvents(
+        _ request: URLRequest
+    ) async throws -> AsyncThrowingStream<OpenAIResponseStreamingEvent, Error> {
+        if AIProxy.printRequestBodies {
+            printRequestBody(request)
+        }
+        let (bytes, response) = try await BackgroundNetworker.makeRequestAndWaitForAsyncBytes(
+            self.urlSession, request
+        )
+        guard response.value(forHTTPHeaderField: "Content-Type")?
+            .lowercased().contains("text/event-stream") == true else {
+            throw AIProxyError.assertion("Expected a Responses event stream")
+        }
+
+        return AsyncThrowingStream { @AIProxyActor continuation in
+            let task = Task {
+                do {
+                    var frame = ""
+                    var terminal = false
+                    for try await line in bytes.lines {
+                        try Task.checkCancellation()
+                        if AIProxy.printResponseBodies {
+                            printStreamingResponseChunk(line)
+                        }
+                        if line.isEmpty {
+                            guard !frame.isEmpty else { continue }
+                            if frame == "[DONE]" {
+                                frame = ""
+                                continue
+                            }
+                            let data = Data(frame.utf8)
+                            frame = ""
+                            let envelope = try JSONDecoder().decode(OpenAIResponseEventEnvelope.self, from: data)
+                            // A future additive event should not break older SDKs.
+                            guard let type = OpenAIResponseStreamEventType(rawValue: envelope.type) else { continue }
+                            let event = try JSONDecoder().decode(OpenAIResponseStreamingEvent.self, from: data)
+                            switch type {
+                            case .responseCompleted, .responseFailed, .responseIncomplete, .error:
+                                terminal = true
+                            default:
+                                break
+                            }
+                            continuation.yield(event)
+                        } else if line.hasPrefix("data:") {
+                            var value = line.dropFirst(5)
+                            if value.first == " " { value = value.dropFirst() }
+                            guard frame.utf8.count + value.utf8.count < 32 * 1_024 * 1_024 else {
+                                throw AIProxyError.assertion("Responses event exceeds 32 MiB")
+                            }
+                            if !frame.isEmpty { frame += "\n" }
+                            frame += value
+                        }
+                    }
+                    guard terminal && frame.isEmpty else {
+                        throw AIProxyError.assertion("Responses stream ended before a terminal event")
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Deserializes streaming NDJSON (newline-delimited JSON) chunks.
     /// Unlike `makeRequestAndDeserializeStreamingChunks`, this method does not expect
     /// SSE-style "data: " prefixes. Each line is treated as raw JSON.
@@ -131,6 +200,10 @@ extension ServiceMixin {
             stream: stream
         )
     }
+}
+
+private struct OpenAIResponseEventEnvelope: Decodable {
+    let type: String
 }
 
 private extension URLRequest {
