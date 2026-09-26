@@ -28,7 +28,11 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
     public let preset: String?
     public let maxOutputTokens: Int?
     public let maxSteps: Int?
+    public let maxToolCalls: Int?
     public let reasoning: Reasoning?
+    public var stream: Bool?
+    public let store: Bool?
+    public let background: Bool?
     public let temperature: Double?
     public let topP: Double?
 
@@ -40,7 +44,9 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
         case preset
         case maxOutputTokens = "max_output_tokens"
         case maxSteps        = "max_steps"
+        case maxToolCalls    = "max_tool_calls"
         case reasoning
+        case stream, store, background
         case temperature
         case topP            = "top_p"
     }
@@ -53,7 +59,11 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
         preset: String? = nil,
         maxOutputTokens: Int? = nil,
         maxSteps: Int? = nil,
+        maxToolCalls: Int? = nil,
         reasoning: Reasoning? = nil,
+        stream: Bool? = nil,
+        store: Bool? = nil,
+        background: Bool? = nil,
         temperature: Double? = nil,
         topP: Double? = nil
     ) {
@@ -64,7 +74,11 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
         self.preset = preset
         self.maxOutputTokens = maxOutputTokens
         self.maxSteps = maxSteps
+        self.maxToolCalls = maxToolCalls
         self.reasoning = reasoning
+        self.stream = stream
+        self.store = store
+        self.background = background
         self.temperature = temperature
         self.topP = topP
     }
@@ -80,7 +94,11 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
         preset: String? = nil,
         maxOutputTokens: Int? = nil,
         maxSteps: Int? = nil,
+        maxToolCalls: Int? = nil,
         reasoning: Reasoning? = nil,
+        stream: Bool? = nil,
+        store: Bool? = nil,
+        background: Bool? = nil,
         temperature: Double? = nil,
         topP: Double? = nil
     ) {
@@ -92,7 +110,11 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
             preset: preset,
             maxOutputTokens: maxOutputTokens,
             maxSteps: maxSteps,
+            maxToolCalls: maxToolCalls,
             reasoning: reasoning,
+            stream: stream,
+            store: store,
+            background: background,
             temperature: temperature,
             topP: topP
         )
@@ -193,6 +215,8 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
         public let maxTokensPerPage: Int?
         public let maxResultsPerQuery: Int?
         public let maxResultsPerRequest: Int?
+        public let filters: Filters?
+        public let userLocation: UserLocation?
 
         private enum CodingKeys: String, CodingKey {
             case type
@@ -200,6 +224,8 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
             case maxTokensPerPage     = "max_tokens_per_page"
             case maxResultsPerQuery   = "max_results_per_query"
             case maxResultsPerRequest = "max_results_per_request"
+            case filters
+            case userLocation = "user_location"
         }
 
         public init(
@@ -207,13 +233,35 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
             maxTokens: Int? = nil,
             maxTokensPerPage: Int? = nil,
             maxResultsPerQuery: Int? = nil,
-            maxResultsPerRequest: Int? = nil
+            maxResultsPerRequest: Int? = nil,
+            filters: Filters? = nil,
+            userLocation: UserLocation? = nil
         ) {
             self.type = type
             self.maxTokens = maxTokens
             self.maxTokensPerPage = maxTokensPerPage
             self.maxResultsPerQuery = maxResultsPerQuery
             self.maxResultsPerRequest = maxResultsPerRequest
+            self.filters = filters
+            self.userLocation = userLocation
+        }
+
+        public struct Filters: Encodable, Sendable {
+            public let searchRecencyFilter: String?
+
+            private enum CodingKeys: String, CodingKey {
+                case searchRecencyFilter = "search_recency_filter"
+            }
+
+            public init(searchRecencyFilter: String? = nil) {
+                self.searchRecencyFilter = searchRecencyFilter
+            }
+        }
+
+        public struct UserLocation: Encodable, Sendable {
+            public let country: String
+
+            public init(country: String) { self.country = country }
         }
 
         public static let webSearch     = Tool(type: .webSearch)

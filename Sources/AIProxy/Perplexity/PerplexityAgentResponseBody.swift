@@ -105,6 +105,25 @@ public struct PerplexityAgentResponseBody: Decodable, Sendable {
             case name, role, company, location
             case socialProfiles = "social_profiles"
         }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            id = (try? values.decode(Int.self, forKey: .id))
+                ?? (try? values.decode(String.self, forKey: .id)).flatMap(Int.init)
+            url = try values.decodeIfPresent(String.self, forKey: .url)
+            title = try values.decodeIfPresent(String.self, forKey: .title)
+            snippet = try values.decodeIfPresent(String.self, forKey: .snippet)
+            source = try values.decodeIfPresent(String.self, forKey: .source)
+            lastUpdated = try values.decodeIfPresent(String.self, forKey: .lastUpdated)
+            date = try values.decodeIfPresent(String.self, forKey: .date)
+            publisher = try values.decodeIfPresent(String.self, forKey: .publisher)
+            author = try values.decodeIfPresent(String.self, forKey: .author)
+            name = try values.decodeIfPresent(String.self, forKey: .name)
+            role = try values.decodeIfPresent(String.self, forKey: .role)
+            company = try values.decodeIfPresent(String.self, forKey: .company)
+            location = try values.decodeIfPresent(String.self, forKey: .location)
+            socialProfiles = try values.decodeIfPresent([SocialProfile].self, forKey: .socialProfiles)
+        }
     }
 
     public struct SocialProfile: Decodable, Sendable {

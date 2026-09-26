@@ -77,10 +77,26 @@ extension DeepSeekChatCompletionChunk.Choice {
         /// The role of the author of this message
         public let role: String?
 
+        /// Incremental function calls (name and ID usually appear only in the
+        /// first delta; later deltas carry argument fragments by index).
+        public let toolCalls: [ToolCall]?
+
         private enum CodingKeys: String, CodingKey {
             case content
             case reasoningContent = "reasoning_content"
             case role
+            case toolCalls = "tool_calls"
+        }
+
+        nonisolated public struct ToolCall: Decodable, Sendable {
+            public let index: Int?
+            public let id: String?
+            public let function: Function?
+
+            nonisolated public struct Function: Decodable, Sendable {
+                public let name: String?
+                public let arguments: String?
+            }
         }
     }
 }

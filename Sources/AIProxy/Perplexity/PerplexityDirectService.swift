@@ -89,6 +89,8 @@ import Foundation
         body: PerplexityAgentRequestBody,
         secondsToWait: UInt = 120
     ) async throws -> PerplexityAgentResponseBody {
+        var body = body
+        body.stream = false
         let request = try AIProxyURLRequest.createDirect(
             baseURL: self.baseURL,
             path: "/v1/agent",
@@ -99,6 +101,24 @@ import Foundation
             additionalHeaders: self.requestHeaders
         )
         return try await self.makeRequestAndDeserializeResponse(request)
+    }
+
+    public func streamingAgentRequest(
+        body: PerplexityAgentRequestBody,
+        secondsToWait: UInt = 300
+    ) async throws -> AsyncThrowingStream<PerplexityAgentStreamingEvent, Error> {
+        var body = body
+        body.stream = true
+        let request = try AIProxyURLRequest.createDirect(
+            baseURL: self.baseURL,
+            path: "/v1/agent",
+            body: try JSONEncoder.aiproxyPerplexityDirect.encode(body),
+            verb: .post,
+            secondsToWait: secondsToWait,
+            contentType: "application/json",
+            additionalHeaders: self.requestHeaders
+        )
+        return try await self.makeRequestAndDeserializePerplexityAgentEvents(request)
     }
 }
 

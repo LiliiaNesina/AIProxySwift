@@ -48,4 +48,10 @@ import Foundation
         body: PerplexityAgentRequestBody,
         secondsToWait: UInt
     ) async throws -> PerplexityAgentResponseBody
+
+    /// Streams typed Agent events and requires a completed terminal response.
+    func streamingAgentRequest(
+        body: PerplexityAgentRequestBody,
+        secondsToWait: UInt
+    ) async throws -> AsyncThrowingStream<PerplexityAgentStreamingEvent, Error>
 }

@@ -144,6 +144,69 @@ extension ServiceMixin {
         }
     }
 
+    /// Agent streams are SSE, with a required terminal response. Do not use the
+    /// generic tolerant decoder here: a dropped terminal event would turn a
+    /// truncated, charged search into an apparently successful empty answer.
+    @AIProxyActor func makeRequestAndDeserializePerplexityAgentEvents(
+        _ request: URLRequest
+    ) async throws -> AsyncThrowingStream<PerplexityAgentStreamingEvent, Error> {
+        if AIProxy.printRequestBodies { printRequestBody(request) }
+        let (bytes, response) = try await BackgroundNetworker.makeRequestAndWaitForAsyncBytes(
+            self.urlSession, request
+        )
+        guard response.value(forHTTPHeaderField: "Content-Type")?
+            .lowercased().contains("text/event-stream") == true else {
+            throw AIProxyError.assertion("Expected a Perplexity Agent event stream")
+        }
+        return AsyncThrowingStream { @AIProxyActor continuation in
+            let task = Task {
+                do {
+                    var frame = ""
+                    var completed = false
+                    for try await line in bytes.lines {
+                        try Task.checkCancellation()
+                        if AIProxy.printResponseBodies { printStreamingResponseChunk(line) }
+                        if line.isEmpty {
+                            guard !frame.isEmpty else { continue }
+                            if frame == "[DONE]" { frame = ""; continue }
+                            let event = try JSONDecoder().decode(
+                                PerplexityAgentStreamingEvent.self, from: Data(frame.utf8)
+                            )
+                            frame = ""
+                            switch event {
+                            case .completed(let response):
+                                guard response.status == "completed" else {
+                                    throw AIProxyError.assertion("Perplexity Agent did not complete")
+                                }
+                                completed = true
+                            case .failed:
+                                throw AIProxyError.assertion("Perplexity Agent failed")
+                            default:
+                                break
+                            }
+                            continuation.yield(event)
+                        } else if line.hasPrefix("data:") {
+                            var value = line.dropFirst(5)
+                            if value.first == " " { value = value.dropFirst() }
+                            guard frame.utf8.count + value.utf8.count < 32 * 1_024 * 1_024 else {
+                                throw AIProxyError.assertion("Perplexity Agent event exceeds 32 MiB")
+                            }
+                            if !frame.isEmpty { frame += "\n" }
+                            frame += value
+                        }
+                    }
+                    guard completed && frame.isEmpty else {
+                        throw AIProxyError.assertion("Perplexity Agent stream ended before completion")
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Deserializes streaming NDJSON (newline-delimited JSON) chunks.
     /// Unlike `makeRequestAndDeserializeStreamingChunks`, this method does not expect
     /// SSE-style "data: " prefixes. Each line is treated as raw JSON.

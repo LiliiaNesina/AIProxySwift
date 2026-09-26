@@ -80,6 +80,8 @@ import Foundation
         body: PerplexityAgentRequestBody,
         secondsToWait: UInt = 120
     ) async throws -> PerplexityAgentResponseBody {
+        var body = body
+        body.stream = false
         let request = try await AIProxyURLRequest.create(
             partialKey: self.partialKey,
             serviceURL: self.serviceURL,
@@ -91,6 +93,25 @@ import Foundation
             contentType: "application/json"
         )
         return try await self.makeRequestAndDeserializeResponse(request)
+    }
+
+    public func streamingAgentRequest(
+        body: PerplexityAgentRequestBody,
+        secondsToWait: UInt = 300
+    ) async throws -> AsyncThrowingStream<PerplexityAgentStreamingEvent, Error> {
+        var body = body
+        body.stream = true
+        let request = try await AIProxyURLRequest.create(
+            partialKey: self.partialKey,
+            serviceURL: self.serviceURL,
+            clientID: self.clientID,
+            proxyPath: "/v1/agent",
+            body: try JSONEncoder.aiproxyPerplexity.encode(body),
+            verb: .post,
+            secondsToWait: secondsToWait,
+            contentType: "application/json"
+        )
+        return try await self.makeRequestAndDeserializePerplexityAgentEvents(request)
     }
 }
 
