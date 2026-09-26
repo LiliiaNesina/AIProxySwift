@@ -87,6 +87,10 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
     /// Defaults to `medium`
     public let reasoningEffort: ReasoningEffort?
 
+    /// Z.AI's reasoning mode for OpenAI-compatible chat requests. Omit for
+    /// OpenAI and other providers that do not accept `thinking`.
+    public let thinking: ThinkingConfig?
+
     /// Specifies the format that the model must output. Please see the docstring on `ResponseFormat` for important usage information
     public let responseFormat: ResponseFormat?
 
@@ -168,6 +172,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         case promptCacheKey = "prompt_cache_key"
         case promptCacheRetention = "prompt_cache_retention"
         case reasoningEffort = "reasoning_effort"
+        case thinking
         case responseFormat = "response_format"
         case seed
         case stop
@@ -202,6 +207,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         promptCacheKey: String? = nil,
         promptCacheRetention: OpenAIChatCompletionRequestBody.PromptCacheRetention? = nil,
         reasoningEffort: OpenAIChatCompletionRequestBody.ReasoningEffort? = nil,
+        thinking: OpenAIChatCompletionRequestBody.ThinkingConfig? = nil,
         responseFormat: OpenAIChatCompletionRequestBody.ResponseFormat? = nil,
         seed: Int? = nil,
         stop: [String]? = nil,
@@ -231,6 +237,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         self.promptCacheKey = promptCacheKey
         self.promptCacheRetention = promptCacheRetention
         self.reasoningEffort = reasoningEffort
+        self.thinking = thinking
         self.responseFormat = responseFormat
         self.seed = seed
         self.stop = stop
@@ -494,6 +501,21 @@ extension OpenAIChatCompletionRequestBody {
         case medium
         case high
         case xhigh
+        case max
+    }
+
+    /// Z.AI's `thinking.type` control for GLM models.
+    nonisolated public struct ThinkingConfig: Encodable, Sendable {
+        public let type: Mode
+
+        public init(type: Mode) {
+            self.type = type
+        }
+
+        nonisolated public enum Mode: String, Encodable, Sendable {
+            case enabled
+            case disabled
+        }
     }
 
     /// An object specifying the format that the model must output. Compatible with GPT-4o, GPT-4o mini, GPT-4
