@@ -27,4 +27,11 @@ final class PerplexityAgentStreamingEventTests: XCTestCase {
         let tools = try XCTUnwrap(json["tools"] as? [[String: Any]])
         XCTAssertEqual((tools[0]["filters"] as? [String: String])?["search_recency_filter"], "day")
     }
+
+    func testPrefixedAgentSourceID() throws {
+        let json = #"{"type":"response.completed","response":{"status":"completed","output":[{"type":"search_results","results":[{"id":"web:7","url":"https://example.com/a"}]}]}}"#
+        let event = try JSONDecoder().decode(PerplexityAgentStreamingEvent.self, from: Data(json.utf8))
+        guard case .completed(let response) = event else { return XCTFail("Expected completion") }
+        XCTAssertEqual(response.allSearchResults.first?.id, 7)
+    }
 }

@@ -109,7 +109,14 @@ public struct PerplexityAgentResponseBody: Decodable, Sendable {
         public init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             id = (try? values.decode(Int.self, forKey: .id))
-                ?? (try? values.decode(String.self, forKey: .id)).flatMap(Int.init)
+                ?? (try? values.decode(String.self, forKey: .id)).flatMap { raw in
+                    if let plain = Int(raw) { return plain }
+                    let parts = raw.split(separator: ":", omittingEmptySubsequences: false)
+                    guard parts.count == 2,
+                          ["web", "people_search"].contains(String(parts[0]))
+                    else { return nil }
+                    return Int(parts[1])
+                }
             url = try values.decodeIfPresent(String.self, forKey: .url)
             title = try values.decodeIfPresent(String.self, forKey: .title)
             snippet = try values.decodeIfPresent(String.self, forKey: .snippet)
