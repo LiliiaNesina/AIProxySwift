@@ -7,6 +7,35 @@
 
 import Foundation
 
+/// `URLSession.AsyncBytes.lines` skips empty lines, including the delimiter
+/// between SSE events. Read the bytes ourselves so a terminal event is not
+/// mistaken for a truncated stream.
+@AIProxyActor
+func forEachSSELine<Bytes: AsyncSequence>(
+    in bytes: Bytes,
+    onLine: (String) throws -> Void
+) async throws where Bytes.Element == UInt8 {
+    var line: [UInt8] = []
+    for try await byte in bytes {
+        if byte == 0x0A {
+            try Task.checkCancellation()
+            if line.last == 0x0D { line.removeLast() }
+            try onLine(String(decoding: line, as: UTF8.self))
+            line.removeAll(keepingCapacity: true)
+        } else {
+            line.append(byte)
+            if line.count & 0xFFF == 0 { try Task.checkCancellation() }
+            guard line.count < 32 * 1_024 * 1_024 else {
+                throw AIProxyError.assertion("SSE line exceeds 32 MiB")
+            }
+        }
+    }
+    if !line.isEmpty {
+        if line.last == 0x0D { line.removeLast() }
+        try onLine(String(decoding: line, as: UTF8.self))
+    }
+}
+
 @AIProxyActor protocol ServiceMixin: Sendable {
     var urlSession: URLSession { get }
 }
@@ -98,22 +127,21 @@ extension ServiceMixin {
                 do {
                     var frame = ""
                     var terminal = false
-                    for try await line in bytes.lines {
-                        try Task.checkCancellation()
+                    try await forEachSSELine(in: bytes) { line in
                         if AIProxy.printResponseBodies {
                             printStreamingResponseChunk(line)
                         }
                         if line.isEmpty {
-                            guard !frame.isEmpty else { continue }
+                            guard !frame.isEmpty else { return }
                             if frame == "[DONE]" {
                                 frame = ""
-                                continue
+                                return
                             }
                             let data = Data(frame.utf8)
                             frame = ""
                             let envelope = try JSONDecoder().decode(OpenAIResponseEventEnvelope.self, from: data)
                             // A future additive event should not break older SDKs.
-                            guard let type = OpenAIResponseStreamEventType(rawValue: envelope.type) else { continue }
+                            guard let type = OpenAIResponseStreamEventType(rawValue: envelope.type) else { return }
                             let event = try JSONDecoder().decode(OpenAIResponseStreamingEvent.self, from: data)
                             switch type {
                             case .responseCompleted, .responseFailed, .responseIncomplete, .error:
@@ -163,12 +191,11 @@ extension ServiceMixin {
                 do {
                     var frame = ""
                     var completed = false
-                    for try await line in bytes.lines {
-                        try Task.checkCancellation()
+                    try await forEachSSELine(in: bytes) { line in
                         if AIProxy.printResponseBodies { printStreamingResponseChunk(line) }
                         if line.isEmpty {
-                            guard !frame.isEmpty else { continue }
-                            if frame == "[DONE]" { frame = ""; continue }
+                            guard !frame.isEmpty else { return }
+                            if frame == "[DONE]" { frame = ""; return }
                             let event = try JSONDecoder().decode(
                                 PerplexityAgentStreamingEvent.self, from: Data(frame.utf8)
                             )
