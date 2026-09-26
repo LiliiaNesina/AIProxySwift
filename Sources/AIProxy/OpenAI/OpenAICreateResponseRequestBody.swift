@@ -632,7 +632,7 @@ extension OpenAICreateResponseRequestBody {
         }
 
         /// Constrains effort on reasoning for reasoning models.
-        /// Currently supported values are low, medium, and high.
+        /// Supported effort values depend on the selected model.
         /// Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
         public let effort: Effort?
 
@@ -672,7 +672,8 @@ extension OpenAICreateResponseRequestBody {
 
 // MARK: - Reasoning Types
 extension OpenAICreateResponseRequestBody.Reasoning {
-    /// Constrains effort on reasoning for reasoning models. Currently supported values are `none`, `minimal`, `low`, `medium`, and `high`.
+    /// Constrains effort on reasoning for reasoning models. Supported values
+    /// vary by model; GPT-6 Luna and Sol also accept `xhigh` and `max`.
     /// Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
     ///
     /// gpt-5.1 defaults to `none`, which does not perform reasoning.
@@ -687,6 +688,7 @@ extension OpenAICreateResponseRequestBody.Reasoning {
         case medium
         case high
         case xhigh
+        case max
     }
 
     /// Summary types for reasoning models

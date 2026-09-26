@@ -9,6 +9,18 @@ import XCTest
 @testable import AIProxy
 
 class OpenAIResponseStreamingEventTests: XCTestCase {
+
+    func testGPT6MaxCompletedEventIsDecodable() throws {
+        let line = #"data: {"type":"response.completed","sequence_number":2,"response":{"id":"resp_gpt6","created_at":1,"model":"gpt-6-luna","status":"completed","output":[],"reasoning":{"effort":"max","summary":"auto"},"store":false}}"#
+        let event = OpenAIResponseStreamingEvent.deserialize(fromLine: line)
+        guard case .responseCompleted(let completed) = event else {
+            return XCTFail("Expected completed response")
+        }
+        XCTAssertEqual(completed.response.id, "resp_gpt6")
+        guard case .max = completed.response.reasoning?.effort else {
+            return XCTFail("Expected max effort")
+        }
+    }
     
     func testResponseCreatedEventIsDecodable() throws {
         let line = #"data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_123","object":"response","created_at":1751312720,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-2024-08-06","output":[],"parallel_tool_calls":true,"Received after 983.2 ms: previous_response_id":null,"reasoning":{"effort":null,"summary":null},"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"web_search_preview","search_context_size":"low","user_location":{"type":"approximate","city":null,"country":"US","region":null,"timezone":null}}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}"#

@@ -306,6 +306,8 @@ extension OpenAIResponse.Reasoning {
         case low
         case medium
         case high
+        case xhigh
+        case max
         case futureProof
 
         public init(from decoder: Decoder) throws {
@@ -321,6 +323,10 @@ extension OpenAIResponse.Reasoning {
                 self = .medium
             case "high":
                 self = .high
+            case "xhigh":
+                self = .xhigh
+            case "max":
+                self = .max
             default:
                 self = .futureProof
             }

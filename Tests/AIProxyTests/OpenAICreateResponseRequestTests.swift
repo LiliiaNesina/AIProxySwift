@@ -10,6 +10,20 @@ import XCTest
 
 final class OpenAICreateResponseRequestTests: XCTestCase {
 
+    func testGPT6MaxReasoningIsEncodable() throws {
+        let body = OpenAICreateResponseRequestBody(
+            input: .text("hello"),
+            model: "gpt-6-luna",
+            reasoning: .init(effort: .max, summary: .auto),
+            store: false
+        )
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as? [String: Any]
+        let reasoning = json?["reasoning"] as? [String: String]
+        XCTAssertEqual(reasoning?["effort"], "max")
+        XCTAssertEqual(reasoning?["summary"], "auto")
+        XCTAssertEqual(json?["store"] as? Bool, false)
+    }
+
     func testResponseRequestIsEncodableWithFileUse() throws {
         let requestBody = OpenAICreateResponseRequestBody(
             input: .items(
@@ -419,4 +433,3 @@ final class OpenAICreateResponseRequestTests: XCTestCase {
     }
 
 }
-

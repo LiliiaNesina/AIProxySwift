@@ -10,6 +10,21 @@ import XCTest
 
 final class OpenAIResponseObjectTests: XCTestCase {
 
+    func testGPT6MaxReasoningIsDecodable() throws {
+        for (raw, expected) in [("xhigh", "xhigh"), ("max", "max")] {
+            let effort = try JSONDecoder().decode(
+                OpenAIResponse.Reasoning.Effort.self,
+                from: Data("\"\(raw)\"".utf8)
+            )
+            switch (effort, expected) {
+            case (.xhigh, "xhigh"), (.max, "max"):
+                break
+            default:
+                XCTFail("Expected \(expected) effort")
+            }
+        }
+    }
+
     func testTextFormatIsDecodable() throws {
         let sampleResponse = #"""
         { "type": "text" }
