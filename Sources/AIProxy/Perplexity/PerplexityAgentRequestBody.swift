@@ -211,6 +211,7 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
     /// Pass `nil` to let Perplexity's defaults apply.
     public struct Tool: Encodable, Sendable {
         public let type: ToolType
+        public let searchType: SearchType?
         public let maxTokens: Int?
         public let maxTokensPerPage: Int?
         public let maxResultsPerQuery: Int?
@@ -220,6 +221,7 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
 
         private enum CodingKeys: String, CodingKey {
             case type
+            case searchType          = "search_type"
             case maxTokens            = "max_tokens"
             case maxTokensPerPage     = "max_tokens_per_page"
             case maxResultsPerQuery   = "max_results_per_query"
@@ -230,6 +232,7 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
 
         public init(
             type: ToolType,
+            searchType: SearchType? = nil,
             maxTokens: Int? = nil,
             maxTokensPerPage: Int? = nil,
             maxResultsPerQuery: Int? = nil,
@@ -238,12 +241,19 @@ public struct PerplexityAgentRequestBody: Encodable, Sendable {
             userLocation: UserLocation? = nil
         ) {
             self.type = type
+            self.searchType = searchType
             self.maxTokens = maxTokens
             self.maxTokensPerPage = maxTokensPerPage
             self.maxResultsPerQuery = maxResultsPerQuery
             self.maxResultsPerRequest = maxResultsPerRequest
             self.filters = filters
             self.userLocation = userLocation
+        }
+
+        /// Retrieval mode for `web_search`; omitted for the provider default.
+        public enum SearchType: String, Encodable, Sendable {
+            case web
+            case fast
         }
 
         public struct Filters: Encodable, Sendable {

@@ -16,6 +16,7 @@ final class PerplexityAgentStreamingEventTests: XCTestCase {
         let body = PerplexityAgentRequestBody(
             model: "perplexity-fast", input: "Today", tools: [
                 .init(type: .webSearch,
+                      searchType: .fast,
                       filters: .init(searchRecencyFilter: "day"),
                       userLocation: .init(country: "UA"))
             ], stream: true, store: false, background: false
@@ -25,6 +26,7 @@ final class PerplexityAgentStreamingEventTests: XCTestCase {
         XCTAssertEqual(json["store"] as? Bool, false)
         XCTAssertEqual(json["background"] as? Bool, false)
         let tools = try XCTUnwrap(json["tools"] as? [[String: Any]])
+        XCTAssertEqual(tools[0]["search_type"] as? String, "fast")
         XCTAssertEqual((tools[0]["filters"] as? [String: String])?["search_recency_filter"], "day")
     }
 
