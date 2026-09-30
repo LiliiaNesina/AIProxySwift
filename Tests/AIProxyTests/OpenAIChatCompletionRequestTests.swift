@@ -410,6 +410,21 @@ final class OpenAIChatCompletionRequestTests: XCTestCase {
 
     }
 
+    func testNovitaThinkingToggleAndStreamingUsageAreEncoded() throws {
+        let body = OpenAIChatCompletionRequestBody(
+            model: "qwen/qwen3.8-flash",
+            messages: [.user(content: .text("Hello"))],
+            enableThinking: false,
+            stream: true,
+            streamOptions: .init(includeUsage: true)
+        )
+        let data = try JSONEncoder().encode(body)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["enable_thinking"] as? Bool, false)
+        XCTAssertEqual((json["stream_options"] as? [String: Any])?["include_usage"] as? Bool, true)
+        XCTAssertNil(json["reasoning_effort"])
+    }
+
     func testChatCompletionRequestWithJSONModeIsEncodableToJson() throws {
         let requestBody = OpenAIChatCompletionRequestBody(
             model: "gpt-4o",

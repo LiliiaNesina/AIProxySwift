@@ -10,6 +10,22 @@ import XCTest
 
 final class OpenAICreateResponseRequestTests: XCTestCase {
 
+    func testProxyModelControlsCarryFutureValuesWithoutAnEffortEnumCase() throws {
+        let body = OpenAICreateResponseRequestBody(
+            input: .text("hello"), model: "future-model",
+            modelControls: .init(values: ["effort": .string("balanced-v2"), "thinking": .bool(false), "detail": .string("full")]),
+            store: false
+        )
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as? [String: Any]
+        let envelope = json?["model_controls"] as? [String: Any]
+        let values = envelope?["values"] as? [String: Any]
+        XCTAssertEqual(envelope?["version"] as? Int, 1)
+        XCTAssertEqual(values?["effort"] as? String, "balanced-v2")
+        XCTAssertEqual(values?["thinking"] as? Bool, false)
+        XCTAssertEqual(values?["detail"] as? String, "full")
+        XCTAssertNil(json?["reasoning"])
+    }
+
     func testGPT6MaxReasoningIsEncodable() throws {
         let body = OpenAICreateResponseRequestBody(
             input: .text("hello"),

@@ -55,6 +55,9 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
     /// o-series models only
     /// Configuration options for reasoning models.
     public let reasoning: Reasoning?
+    /// Optional proxy-owned settings envelope. The proxy removes it before
+    /// forwarding to OpenAI. Omit when calling the provider directly.
+    public let modelControls: AIProxyModelControls?
 
     /// A stable identifier used to help detect users of your application that may be violating OpenAI's usage policies.
     /// The IDs should be a string that uniquely identifies each user.
@@ -109,6 +112,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         case tools
         case toolChoice = "tool_choice"
         case reasoning
+        case modelControls = "model_controls"
         case safetyIdentifier = "safety_identifier"
         case store
         case parallelToolCalls = "parallel_tool_calls"
@@ -136,6 +140,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         previousResponseId: String? = nil,
         prompt: OpenAICreateResponseRequestBody.Prompt? = nil,
         reasoning: OpenAICreateResponseRequestBody.Reasoning? = nil,
+        modelControls: AIProxyModelControls? = nil,
         safetyIdentifier: String? = nil,
         store: Bool? = nil,
         stream: Bool? = nil,
@@ -157,6 +162,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         self.previousResponseId = previousResponseId
         self.prompt = prompt
         self.reasoning = reasoning
+        self.modelControls = modelControls
         self.safetyIdentifier = safetyIdentifier
         self.store = store
         self.stream = stream

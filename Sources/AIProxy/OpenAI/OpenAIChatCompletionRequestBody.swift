@@ -91,6 +91,9 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
     /// OpenAI and other providers that do not accept `thinking`.
     public let thinking: ThinkingConfig?
 
+    /// Novita Qwen's binary reasoning switch. Omit for other providers.
+    public let enableThinking: Bool?
+
     /// Specifies the format that the model must output. Please see the docstring on `ResponseFormat` for important usage information
     public let responseFormat: ResponseFormat?
 
@@ -173,6 +176,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         case promptCacheRetention = "prompt_cache_retention"
         case reasoningEffort = "reasoning_effort"
         case thinking
+        case enableThinking = "enable_thinking"
         case responseFormat = "response_format"
         case seed
         case stop
@@ -208,6 +212,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         promptCacheRetention: OpenAIChatCompletionRequestBody.PromptCacheRetention? = nil,
         reasoningEffort: OpenAIChatCompletionRequestBody.ReasoningEffort? = nil,
         thinking: OpenAIChatCompletionRequestBody.ThinkingConfig? = nil,
+        enableThinking: Bool? = nil,
         responseFormat: OpenAIChatCompletionRequestBody.ResponseFormat? = nil,
         seed: Int? = nil,
         stop: [String]? = nil,
@@ -238,6 +243,7 @@ nonisolated public struct OpenAIChatCompletionRequestBody: Encodable, Sendable {
         self.promptCacheRetention = promptCacheRetention
         self.reasoningEffort = reasoningEffort
         self.thinking = thinking
+        self.enableThinking = enableThinking
         self.responseFormat = responseFormat
         self.seed = seed
         self.stop = stop
@@ -625,7 +631,11 @@ extension OpenAIChatCompletionRequestBody {
        /// The usage field on this chunk shows the token usage statistics for the entire request,
        /// and the choices field will always be an empty array. All other chunks will also include
        /// a usage field, but with a null value.
-       let includeUsage: Bool
+       public let includeUsage: Bool
+
+       public init(includeUsage: Bool) {
+           self.includeUsage = includeUsage
+       }
 
        private enum CodingKeys: String, CodingKey {
            case includeUsage = "include_usage"
