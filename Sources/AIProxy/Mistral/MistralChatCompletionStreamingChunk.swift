@@ -37,5 +37,20 @@ extension MistralChatCompletionStreamingChunk.Choice {
     nonisolated public struct Delta: Codable, Sendable {
         public let role: String?
         public let content: String?
+        public let reasoningContent: String?
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let content = try c.decodeIfPresent(ChatCompletionContent.self, forKey: .content)
+            self.content = content?.text
+            let explicit = try c.decodeIfPresent(String.self, forKey: .reasoningContent)
+            reasoningContent = content?.reasoning(appendingTo: explicit) ?? explicit
+            role = try c.decodeIfPresent(String.self, forKey: .role)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case role, content
+            case reasoningContent = "reasoning_content"
+        }
     }
 }

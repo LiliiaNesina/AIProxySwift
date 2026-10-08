@@ -315,13 +315,30 @@ extension GeminiGenerateContentResponseBody {
 
         /// The number of tokens allocated for thinking.
         public let thoughtsTokenCount: Int?
+
+        /// Per-modality usage returned by Nano Banana 2.1 and other Gemini models.
+        public let promptTokensDetails: [TokenDetails]?
+        public let candidatesTokensDetails: [TokenDetails]?
         
-        public init(cachedContentTokenCount: Int?, candidatesTokenCount: Int?, promptTokenCount: Int?, totalTokenCount: Int?, thoughtsTokenCount: Int?) {
+        public init(cachedContentTokenCount: Int?, candidatesTokenCount: Int?, promptTokenCount: Int?, totalTokenCount: Int?, thoughtsTokenCount: Int?, promptTokensDetails: [TokenDetails]? = nil, candidatesTokensDetails: [TokenDetails]? = nil) {
             self.cachedContentTokenCount = cachedContentTokenCount
             self.candidatesTokenCount = candidatesTokenCount
             self.promptTokenCount = promptTokenCount
             self.totalTokenCount = totalTokenCount
             self.thoughtsTokenCount = thoughtsTokenCount
+            self.promptTokensDetails = promptTokensDetails
+            self.candidatesTokensDetails = candidatesTokensDetails
+        }
+
+        nonisolated public struct TokenDetails: Decodable, Sendable {
+            /// String rather than an enum so new modalities remain decodable.
+            public let modality: String
+            public let tokenCount: Int
+
+            public init(modality: String, tokenCount: Int) {
+                self.modality = modality
+                self.tokenCount = tokenCount
+            }
         }
     }
 }

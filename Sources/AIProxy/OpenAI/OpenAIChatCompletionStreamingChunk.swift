@@ -114,6 +114,17 @@ extension OpenAIChatCompletionChunk.Choice {
             self.reasoningContent = reasoningContent
         }
 
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let content = try c.decodeIfPresent(ChatCompletionContent.self, forKey: .content)
+            self.content = content?.text
+            let explicit = try c.decodeIfPresent(String.self, forKey: .reasoningContent)
+            reasoningContent = content?.reasoning(appendingTo: explicit) ?? explicit
+            refusal = try c.decodeIfPresent(String.self, forKey: .refusal)
+            role = try c.decodeIfPresent(String.self, forKey: .role)
+            toolCalls = try c.decodeIfPresent([ToolCall].self, forKey: .toolCalls)
+        }
+
         private enum CodingKeys: String, CodingKey {
             case content
             case refusal
