@@ -10,6 +10,26 @@ import XCTest
 
 final class OpenAICreateResponseRequestTests: XCTestCase {
 
+    func testServiceTierIsOptionalAndCanBeSelectedAfterInitialization() throws {
+        var body = OpenAICreateResponseRequestBody(
+            input: .text("hello"), model: "gpt-6-luna", store: false
+        )
+        let standard = try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as! [String: Any]
+        XCTAssertNil(standard["service_tier"])
+        body.serviceTier = .flex
+        var flex = try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as! [String: Any]
+        XCTAssertEqual(flex.removeValue(forKey: "service_tier") as? String, "flex")
+        XCTAssertTrue(NSDictionary(dictionary: flex).isEqual(to: standard))
+    }
+
+    func testServiceTierCanBeSelectedInInitializer() throws {
+        let body = OpenAICreateResponseRequestBody(
+            input: .text("hello"), model: "gpt-6-luna", serviceTier: .flex
+        )
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as! [String: Any]
+        XCTAssertEqual(json["service_tier"] as? String, "flex")
+    }
+
     func testProxyModelControlsCarryFutureValuesWithoutAnEffortEnumCase() throws {
         let body = OpenAICreateResponseRequestBody(
             input: .text("hello"), model: "future-model",

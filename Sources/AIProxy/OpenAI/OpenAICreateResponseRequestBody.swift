@@ -64,6 +64,9 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
     /// We recommend hashing their username or email address, in order to avoid sending us any identifying information.
     public let safetyIdentifier: String?
 
+    /// Processing tier for this request. Omit to use the project's default tier.
+    public var serviceTier: ServiceTier?
+
     /// Whether to store the generated model response for later retrieval via API.
     /// Defaults to true.
     public let store: Bool?
@@ -114,6 +117,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         case reasoning
         case modelControls = "model_controls"
         case safetyIdentifier = "safety_identifier"
+        case serviceTier = "service_tier"
         case store
         case parallelToolCalls = "parallel_tool_calls"
         case previousResponseId = "previous_response_id"
@@ -142,6 +146,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         reasoning: OpenAICreateResponseRequestBody.Reasoning? = nil,
         modelControls: AIProxyModelControls? = nil,
         safetyIdentifier: String? = nil,
+        serviceTier: OpenAICreateResponseRequestBody.ServiceTier? = nil,
         store: Bool? = nil,
         stream: Bool? = nil,
         temperature: Double? = nil,
@@ -164,6 +169,7 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
         self.reasoning = reasoning
         self.modelControls = modelControls
         self.safetyIdentifier = safetyIdentifier
+        self.serviceTier = serviceTier
         self.store = store
         self.stream = stream
         self.temperature = temperature
@@ -180,6 +186,15 @@ nonisolated public struct OpenAICreateResponseRequestBody: Encodable, Sendable {
 }
 
 extension OpenAICreateResponseRequestBody {
+
+    nonisolated public enum ServiceTier: String, Encodable, Sendable {
+        case auto
+        case `default`
+        case flex
+        case priority
+        case fast
+        case ultrafast
+    }
 
     /// One object in the JSON `context_management` array (`type`, `compact_threshold`, …).
     nonisolated public struct ContextManagementItem: Encodable, Sendable {

@@ -10,6 +10,18 @@ import XCTest
 
 class OpenAIResponseStreamingEventTests: XCTestCase {
 
+    func testCompletedResponsePreservesActualServiceTier() throws {
+        for tier in ["flex", "default", "future-tier"] {
+            let line = "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"output\":[],\"service_tier\":\"\(tier)\"}}"
+            guard case .responseCompleted(let result) = OpenAIResponseStreamingEvent.deserialize(fromLine: line) else {
+                return XCTFail("Expected completed response")
+            }
+            XCTAssertEqual(result.response.serviceTier, tier)
+        }
+        let response = try JSONDecoder().decode(OpenAIResponse.self, from: Data(#"{"output":[]}"#.utf8))
+        XCTAssertNil(response.serviceTier)
+    }
+
     func testGPT6MaxCompletedEventIsDecodable() throws {
         let line = #"data: {"type":"response.completed","sequence_number":2,"response":{"id":"resp_gpt6","created_at":1,"model":"gpt-6-luna","status":"completed","output":[],"reasoning":{"effort":"max","summary":"auto"},"store":false}}"#
         let event = OpenAIResponseStreamingEvent.deserialize(fromLine: line)

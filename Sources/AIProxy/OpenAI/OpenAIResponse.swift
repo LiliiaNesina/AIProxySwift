@@ -79,6 +79,9 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
     /// Configuration options for [reasoning models](https://platform.openai.com/docs/guides/reasoning).
     public let reasoning: Reasoning?
 
+    /// The processing tier actually used, which can differ from the requested tier.
+    public let serviceTier: String?
+
     /// The status of the response generation.
     /// One of `completed`, `failed`, `in_progress`, or `incomplete`.
     public let status: Status?
@@ -148,7 +151,8 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
         topP: Double?,
         truncation: String?,
         usage: ResponseUsage?,
-        user: String?
+        user: String?,
+        serviceTier: String? = nil
     ) {
         self.createdAt = createdAt
         self.error = error
@@ -162,6 +166,7 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
         self.parallelToolCalls = parallelToolCalls
         self.previousResponseId = previousResponseId
         self.reasoning = reasoning
+        self.serviceTier = serviceTier
         self.status = status
         self.text = text
         self.temperature = temperature
@@ -208,6 +213,7 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
         case parallelToolCalls = "parallel_tool_calls"
         case previousResponseId = "previous_response_id"
         case reasoning
+        case serviceTier = "service_tier"
         case status
         case text
         case temperature
