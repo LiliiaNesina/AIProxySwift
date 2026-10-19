@@ -6,6 +6,7 @@ nonisolated public enum PerplexityAgentStreamingEvent: Decodable, Sendable {
     case outputTextDelta(String)
     case outputItemDone(PerplexityAgentResponseBody.OutputItem)
     case completed(PerplexityAgentResponseBody)
+    case incomplete(PerplexityAgentResponseBody)
     case failed
     case other
 
@@ -22,7 +23,9 @@ nonisolated public enum PerplexityAgentStreamingEvent: Decodable, Sendable {
             self = .outputItemDone(try values.decode(PerplexityAgentResponseBody.OutputItem.self, forKey: .item))
         case "response.completed":
             self = .completed(try values.decode(PerplexityAgentResponseBody.self, forKey: .response))
-        case "response.failed", "response.incomplete", "error":
+        case "response.incomplete":
+            self = .incomplete(try values.decode(PerplexityAgentResponseBody.self, forKey: .response))
+        case "response.failed", "response.cancelled", "error":
             self = .failed
         default:
             self = .other

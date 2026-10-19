@@ -206,6 +206,13 @@ extension ServiceMixin {
                                     throw AIProxyError.assertion("Perplexity Agent did not complete")
                                 }
                                 completed = true
+                            case .incomplete(let response):
+                                guard response.status == "incomplete",
+                                      response.incompleteDetails?.reason == "max_output_tokens",
+                                      !response.assistantText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                                    throw AIProxyError.assertion("Perplexity Agent did not complete")
+                                }
+                                completed = true
                             case .failed:
                                 throw AIProxyError.assertion("Perplexity Agent failed")
                             default:

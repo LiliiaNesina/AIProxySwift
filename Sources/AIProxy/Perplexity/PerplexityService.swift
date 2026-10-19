@@ -49,7 +49,8 @@ import Foundation
         secondsToWait: UInt
     ) async throws -> PerplexityAgentResponseBody
 
-    /// Streams typed Agent events and requires a completed terminal response.
+    /// Streams typed Agent events and requires a completed or explicitly
+    /// token-limited terminal response with useful partial text.
     func streamingAgentRequest(
         body: PerplexityAgentRequestBody,
         secondsToWait: UInt

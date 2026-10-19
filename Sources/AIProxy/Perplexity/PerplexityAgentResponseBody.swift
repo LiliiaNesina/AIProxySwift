@@ -16,6 +16,7 @@ import Foundation
 public struct PerplexityAgentResponseBody: Decodable, Sendable {
     public let id: String?
     public let status: String?
+    public let incompleteDetails: IncompleteDetails?
     public let model: String?
     public let output: [OutputItem]?
     public let usage: Usage?
@@ -25,11 +26,16 @@ public struct PerplexityAgentResponseBody: Decodable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id
         case status
+        case incompleteDetails = "incomplete_details"
         case model
         case output
         case usage
         case createdAt   = "created_at"
         case completedAt = "completed_at"
+    }
+
+    public struct IncompleteDetails: Decodable, Sendable {
+        public let reason: String?
     }
 
     public struct OutputItem: Decodable, Sendable {

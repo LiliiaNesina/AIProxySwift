@@ -3,6 +3,19 @@ import XCTest
 @testable import AIProxy
 
 final class PerplexityAgentStreamingEventTests: XCTestCase {
+    func testIncompleteCarriesPartialAnswerAndReason() throws {
+        let json = #"{"type":"response.incomplete","response":{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Partial answer"}]}]}}"#
+        let event = try JSONDecoder().decode(PerplexityAgentStreamingEvent.self, from: Data(json.utf8))
+        guard case .incomplete(let response) = event else { return XCTFail("Expected incomplete response") }
+        XCTAssertEqual(response.assistantText, "Partial answer")
+        XCTAssertEqual(response.incompleteDetails?.reason, "max_output_tokens")
+    }
+
+    func testCancelledIsFailure() throws {
+        let event = try JSONDecoder().decode(PerplexityAgentStreamingEvent.self, from: Data(#"{"type":"response.cancelled"}"#.utf8))
+        guard case .failed = event else { return XCTFail("Expected failure") }
+    }
+
     func testCompletedResponseKeepsStringSourceIDs() throws {
         let json = #"{"type":"response.completed","response":{"status":"completed","output":[{"type":"search_results","results":[{"id":"7","url":"https://example.com/a","title":"A"}]},{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Result [7]"}]}],"usage":{"cost":{"currency":"USD","total_cost":0.003}}}}"#
         let event = try JSONDecoder().decode(PerplexityAgentStreamingEvent.self, from: Data(json.utf8))
