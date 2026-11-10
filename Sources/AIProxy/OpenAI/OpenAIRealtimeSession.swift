@@ -14,7 +14,9 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
 @AIProxyActor open class OpenAIRealtimeSession {
     private var isTearingDown = false
     private let webSocketTask: URLSessionWebSocketTask
-    private var continuation: AsyncStream<OpenAIRealtimeMessage>.Continuation?
+    private let continuation: AsyncStream<OpenAIRealtimeMessage>.Continuation
+    /// The session's single-consumer stream, including events received before iteration starts.
+    public let receiver: AsyncStream<OpenAIRealtimeMessage>
     private let setupTime = Date()
     let sessionConfiguration: OpenAIRealtimeSessionConfiguration
 
@@ -24,6 +26,11 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
     ) {
         self.webSocketTask = webSocketTask
         self.sessionConfiguration = sessionConfiguration
+        // Install the buffer before resuming the socket. A rejection can
+        // arrive and close the socket before the caller starts iterating.
+        let (receiver, continuation) = AsyncStream<OpenAIRealtimeMessage>.makeStream()
+        self.receiver = receiver
+        self.continuation = continuation
 
         Task {
             await self.sendMessage(OpenAIRealtimeSessionUpdate(session: self.sessionConfiguration))
@@ -34,13 +41,6 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
 
     deinit {
         logIf(.debug)?.debug("OpenAIRealtimeSession is being freed")
-    }
-
-    /// Messages sent from OpenAI are published on this receiver as they arrive
-    public var receiver: AsyncStream<OpenAIRealtimeMessage> {
-        return AsyncStream { continuation in
-            self.continuation = continuation
-        }
     }
 
     /// Sends a message through the websocket connection
@@ -60,8 +60,7 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
     /// Close the websocket connection
     public func disconnect() {
         self.isTearingDown = true
-        self.continuation?.finish()
-        self.continuation = nil
+        self.continuation.finish()
         self.webSocketTask.cancel()
     }
 
@@ -109,7 +108,7 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
         let body = closeCode == .invalid
             ? "ws_error_\(error.code)"
             : "ws_close_\(closeCode.rawValue)"
-        self.continuation?.yield(.error(OpenAIRealtimeErrorEvent(errorBody: body)))
+        self.continuation.yield(.error(OpenAIRealtimeErrorEvent(errorBody: body)))
 
         self.disconnect()
     }
@@ -138,7 +137,7 @@ nonisolated private let kWebsocketDisconnectedEarlyThreshold: TimeInterval = 3
 
         do {
             let message = try JSONDecoder().decode(OpenAIRealtimeMessage.self, from: data)
-            self.continuation?.yield(message)
+            self.continuation.yield(message)
             if case .error(let errorEvent) = message {
                 logIf(.error)?.error("Received realtime error event from OpenAI: \(errorEvent.errorBody ?? "no body")")
                 return
