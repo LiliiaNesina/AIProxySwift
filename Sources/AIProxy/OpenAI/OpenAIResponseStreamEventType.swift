@@ -49,6 +49,8 @@ nonisolated public enum OpenAIResponseStreamEventType: String, Sendable {
     // MARK: - Reasoning Events
     case responseReasoningDelta = "response.reasoning.delta"
     case responseReasoningDone = "response.reasoning.done"
+    case responseReasoningTextDelta = "response.reasoning_text.delta"
+    case responseReasoningTextDone = "response.reasoning_text.done"
     
     // MARK: - Reasoning Summary Events
     case responseReasoningSummaryPartAdded = "response.reasoning_summary_part.added"

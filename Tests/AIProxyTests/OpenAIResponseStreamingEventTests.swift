@@ -10,6 +10,36 @@ import XCTest
 
 class OpenAIResponseStreamingEventTests: XCTestCase {
 
+    func testReasoningTextStreamKeepsReasoningSeparateFromAnswer() throws {
+        let added = #"data: {"type":"response.content_part.added","item_id":"rs_1","content_index":0,"output_index":0,"sequence_number":3,"part":{"type":"reasoning_text","text":""}}"#
+        let delta = #"data: {"type":"response.reasoning_text.delta","item_id":"rs_1","content_index":0,"output_index":0,"sequence_number":4,"delta":"Check the inputs."}"#
+        let done = #"data: {"type":"response.reasoning_text.done","item_id":"rs_1","content_index":0,"output_index":0,"sequence_number":5,"text":"Check the inputs."}"#
+        let partDone = #"data: {"type":"response.content_part.done","item_id":"rs_1","content_index":0,"output_index":0,"sequence_number":6,"part":{"type":"reasoning_text","text":"Check the inputs."}}"#
+        let completed = #"data: {"type":"response.completed","sequence_number":7,"response":{"status":"completed","output":[{"type":"reasoning","id":"rs_1","summary":[],"content":[{"type":"reasoning_text","text":"Check the inputs."}]},{"type":"message","role":"assistant","content":[{"type":"output_text","text":"OK","annotations":[]}]}]}}"#
+
+        guard case .contentPartAdded(let beginning) = OpenAIResponseStreamingEvent.deserialize(fromLine: added),
+              case .reasoningText(let firstPart) = beginning.part,
+              case .reasoningTextDelta(let update) = OpenAIResponseStreamingEvent.deserialize(fromLine: delta),
+              case .reasoningTextDone(let finalText) = OpenAIResponseStreamingEvent.deserialize(fromLine: done),
+              case .contentPartDone(let ending) = OpenAIResponseStreamingEvent.deserialize(fromLine: partDone),
+              case .reasoningText(let lastPart) = ending.part,
+              case .responseCompleted(let result) = OpenAIResponseStreamingEvent.deserialize(fromLine: completed),
+              case .reasoning(let reasoning) = result.response.output.first else {
+            return XCTFail("Expected reasoning part, text updates and completed response")
+        }
+
+        XCTAssertEqual(beginning.itemID, "rs_1")
+        XCTAssertEqual(firstPart.text, "")
+        XCTAssertEqual(update.itemID, "rs_1")
+        XCTAssertEqual(update.contentIndex, 0)
+        XCTAssertEqual(update.delta, "Check the inputs.")
+        XCTAssertEqual(finalText.sequenceNumber, 5)
+        XCTAssertEqual(finalText.text, update.delta)
+        XCTAssertEqual(lastPart.text, finalText.text)
+        XCTAssertEqual(reasoning.content?.map(\.text), [finalText.text])
+        XCTAssertEqual(result.response.outputText, "OK")
+    }
+
     func testCompletedResponsePreservesActualServiceTier() throws {
         for tier in ["flex", "default", "future-tier"] {
             let line = "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"output\":[],\"service_tier\":\"\(tier)\"}}"

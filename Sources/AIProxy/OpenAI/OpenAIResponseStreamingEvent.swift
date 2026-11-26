@@ -40,6 +40,8 @@ nonisolated public enum OpenAIResponseStreamingEvent: Decodable, Sendable {
     case computerCallProgress(ComputerCallProgress)
     case reasoningDelta(ReasoningDelta)
     case reasoningDone(ReasoningDone)
+    case reasoningTextDelta(ReasoningTextDelta)
+    case reasoningTextDone(ReasoningTextDone)
     case reasoningSummaryPartAdded(ReasoningSummaryPartAdded)
     case reasoningSummaryPartDone(ReasoningSummaryPartDone)
     case reasoningSummaryTextDelta(ReasoningSummaryTextDelta)
@@ -135,6 +137,12 @@ nonisolated public enum OpenAIResponseStreamingEvent: Decodable, Sendable {
         case .responseWebSearchCallCompleted:
             self = .webSearchCallCompleted(try WebSearchCallCompleted(from: decoder))
 
+        case .responseReasoningTextDelta:
+            self = .reasoningTextDelta(try ReasoningTextDelta(from: decoder))
+
+        case .responseReasoningTextDone:
+            self = .reasoningTextDone(try ReasoningTextDone(from: decoder))
+
         case .responseReasoningSummaryPartAdded:
             self = .reasoningSummaryPartAdded(try ReasoningSummaryPartAdded(from: decoder))
 
@@ -221,6 +229,8 @@ nonisolated public enum OpenAIResponseStreamingEvent: Decodable, Sendable {
         case .computerCallProgress: return .responseReasoningDelta
         case .reasoningDelta: return .responseReasoningDelta
         case .reasoningDone: return .responseReasoningDone
+        case .reasoningTextDelta: return .responseReasoningTextDelta
+        case .reasoningTextDone: return .responseReasoningTextDone
         case .reasoningSummaryPartAdded: return .responseReasoningSummaryPartAdded
         case .reasoningSummaryPartDone: return .responseReasoningSummaryPartDone
         case .reasoningSummaryTextDelta: return .responseReasoningSummaryTextDelta
@@ -358,6 +368,9 @@ extension OpenAIResponseStreamingEvent {
         /// The index of the content part that was added.
         public let contentIndex: Int?
 
+        /// The ID of the output item that the content part was added to.
+        public let itemID: String?
+
         /// The index of the output item that the content part was added to.
         public let outputIndex: Int?
 
@@ -367,6 +380,7 @@ extension OpenAIResponseStreamingEvent {
         private enum CodingKeys: String, CodingKey {
             case sequenceNumber = "sequence_number"
             case contentIndex = "content_index"
+            case itemID = "item_id"
             case outputIndex = "output_index"
             case part
         }
@@ -732,6 +746,38 @@ extension OpenAIResponseStreamingEvent {
             case sequenceNumber = "sequence_number"
             case outputItemIndex = "output_item_index"
             case reasoning
+        }
+    }
+
+    nonisolated public struct ReasoningTextDelta: Decodable, Sendable {
+        public let contentIndex: Int?
+        public let itemID: String?
+        public let outputIndex: Int?
+        public let sequenceNumber: Int?
+        public let delta: String
+
+        private enum CodingKeys: String, CodingKey {
+            case contentIndex = "content_index"
+            case itemID = "item_id"
+            case outputIndex = "output_index"
+            case sequenceNumber = "sequence_number"
+            case delta
+        }
+    }
+
+    nonisolated public struct ReasoningTextDone: Decodable, Sendable {
+        public let contentIndex: Int?
+        public let itemID: String?
+        public let outputIndex: Int?
+        public let sequenceNumber: Int?
+        public let text: String
+
+        private enum CodingKeys: String, CodingKey {
+            case contentIndex = "content_index"
+            case itemID = "item_id"
+            case outputIndex = "output_index"
+            case sequenceNumber = "sequence_number"
+            case text
         }
     }
 }

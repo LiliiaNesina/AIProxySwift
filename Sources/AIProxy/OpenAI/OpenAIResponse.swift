@@ -189,7 +189,7 @@ nonisolated public struct OpenAIResponse: Decodable, Sendable {
                     switch content {
                     case .outputText(let txt):
                         texts.append(txt.text)
-                    case .refusal:
+                    case .refusal, .reasoningText:
                         break
                     }
                 }
@@ -389,6 +389,9 @@ extension OpenAIResponse {
 
             /// A summary of the reasoning performed by the model. This can be useful for debugging and understanding the model's reasoning process.
             public let summary: [OpenAISummaryText]?
+
+            /// Reasoning content, when returned by the provider.
+            public let content: [OpenAIReasoningText]?
         }
     }
 
@@ -536,6 +539,9 @@ extension OpenAIResponse {
         /// A refusal from the model.
         case refusal(String)
 
+        /// A reasoning content part streamed by the model.
+        case reasoningText(OpenAIReasoningText)
+
         private enum CodingKeys: String, CodingKey {
             case type
         }
@@ -550,6 +556,8 @@ extension OpenAIResponse {
             case "refusal":
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self = .refusal(try container.decode(String.self, forKey: .type))
+            case "reasoning_text":
+                self = .reasoningText(try OpenAIReasoningText(from: decoder))
             default:
                 throw DecodingError.dataCorruptedError(
                     forKey: .type,
